@@ -7,6 +7,7 @@
 import pandas as pd
 #from sodapy import Socrata
 import matplotlib.pyplot as plt
+import math
 
 # Unauthenticated client only works with public data sets. Note 'None'
 # in place of application token, and no username or password:
@@ -89,10 +90,19 @@ def getYear(list, yr):
 def getDeaths(list, age, year):
     list = getYear(getAgeGroup(list, age), year)
     ans = []
-    for T in  list:
-        ans.append(T.deaths)
-    while(len(ans) < 52):
-        ans.append(0)
+    # for T in list:
+    #     ans.append(T.deaths)
+    # if(year==2020):
+    #     for T in ans:
+    #         print(T)
+    if(year!=2020):
+        for T in list:
+            ans.append(T.deaths)
+    else:
+        for i in range(46):
+            ans.append(list[i].deaths)
+        while(len(ans) < 52):
+            ans.append(list[45].deaths)
     return ans
 
 def byDate(E):
@@ -109,6 +119,9 @@ def sortByAge(E):
 
 def interpretLine(str):
     data = str.split(',')
+    # print(data)
+    if(data[8] != 'Unweighted'):
+        return None
     return Entry(data[3], data[4], data[5], data[6])
 
 file = open("cdc_us_deaths_data.csv", "r")
@@ -120,6 +133,8 @@ dataset = []
 
 for line in stripped[1:]:
     temp = interpretLine(line)
+    if(temp == None):
+        continue
     dataset.append(temp)
 
 #choice = input("How do you want to sort the data?\n[1]Chronologically\n[2]By Age\nInput: ")
@@ -131,7 +146,13 @@ for line in stripped[1:]:
 #for data in dataset:
 #    print(data.format())
 
+nrow = 2
+ncol = 3
+fig, axes = plt.subplots(nrow, ncol)
 
+df_list = []
+years = ['2015', '2016', '2017', '2018', '2019', '2020']
+colors = ['purple', 'navy', 'darkgreen', 'olive', 'darkgoldenrod', 'red']
 def plotAgeGroup(n):
     y2015 = getDeaths(dataset, n, 2015)
     y2016 = getDeaths(dataset, n, 2016)
@@ -140,25 +161,45 @@ def plotAgeGroup(n):
     y2019 = getDeaths(dataset, n, 2019)
     y2020 = getDeaths(dataset, n, 2020)
 
-    # Data
-    df=pd.DataFrame({'2015': y2015, '2016': y2016, '2017': y2017, '2018': y2018, '2019': y2019, '2020': y2020})
+#Debugging
+    # print("n = "+str(n))
+
+    # print("2015: "+str(len(y2015)))
+    # print("2016: "+str(len(y2016)))
+    # print("2017: "+str(len(y2017)))
+    # print("2018: "+str(len(y2018)))
+    # print("2019: "+str(len(y2019)))
+    # print("2020: "+str(len(y2020)))
+
+
+    # Data  
+    df_list.insert(n-1, pd.DataFrame({'2015': y2015, '2016': y2016, '2017': y2017, '2018': y2018, '2019': y2019, '2020': y2020}))
+    
+    row = math.floor((n-1)/3)
+    col = (n-1)%3
+    for i in range(6):
+        df_list[n-1][years[i]].plot(ax=axes[row,col])
+    axes[row,col].set_title(numToAgeGroup(n))
+    axes[row, col].legend()
+
 
     # multiple line plot
-    plt.plot(df)
-    plt.plot( '2015', data=df, marker='', color='purple', linewidth=2)
-    plt.plot( '2016', data=df, marker='', color='navy', linewidth=2)
-    plt.plot( '2017', data=df, marker='', color='darkgreen', linewidth=2)
-    plt.plot( '2018', data=df, marker='', color='olive', linewidth=2)
-    plt.plot( '2019', data=df, marker='', color='darkgoldenrod', linewidth=2)
-    plt.plot( '2020', data=df, marker='', color='red', linewidth=2)
+    #plt.plot(df_list[n-1])
+    #plt.plot( '2015', data=df_list[n-1], marker='', color='purple', linewidth=2)
+    #plt.plot( '2016', data=df_list[n-1], marker='', color='navy', linewidth=2)
+    #plt.plot( '2017', data=df_list[n-1], marker='', color='darkgreen', linewidth=2)
+    #plt.plot( '2018', data=df_list[n-1], marker='', color='olive', linewidth=2)
+    #plt.plot( '2019', data=df_list[n-1], marker='', color='darkgoldenrod', linewidth=2)
+    #plt.plot( '2020', data=df_list[n-1], marker='', color='red', linewidth=2)
     #plt.plot( 'x', 'y3', data=df, marker='', color='olive', linewidth=2, linestyle='dashed', label="toto")
-    plt.legend()
-    plt.ylabel("Number of Deaths")
-    plt.xlabel("Week Number")
-    plt.title("Deaths "+numToAgeGroup(n)+" Per Year By Week")
-    plt.show()
+    #plt.legend()
+    #plt.ylabel("Number of Deaths")
+    #plt.xlabel("Week Number")
+    #plt.title("Deaths "+numToAgeGroup(n)+" Per Year By Week")
 
 for i in range(1, 7):
     plotAgeGroup(i)
+
+plt.show()
 
 file.close()
